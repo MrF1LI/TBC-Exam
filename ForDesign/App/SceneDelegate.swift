@@ -13,7 +13,7 @@ import FirebaseStorage
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     var window: UIWindow?
-    
+    var firebaseManager = FirebaseManager()
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
@@ -29,7 +29,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             
             // If user reference contains current user id go to main page
             
-            let reference = FirebaseManager.dbUsers.child(FirebaseManager.currentUser!.uid)
+            let reference = firebaseManager.dbUsers.child(FirebaseManager.currentUser!.uid)
             
             reference.observeSingleEvent(of: .value) { snapshot in
                 if snapshot.exists() {

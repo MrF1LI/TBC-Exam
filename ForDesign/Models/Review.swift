@@ -8,12 +8,10 @@
 import Foundation
 
 struct Review: Codable {
-    
     let id: String
     let author: String
     let text: String
-    let date: String
+    let date: Date
     
     var lecturer: String?
-    
 }

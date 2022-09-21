@@ -33,6 +33,7 @@ extension UIImage {
         guard let cgImage = image?.cgImage else { return nil }
         self.init(cgImage: cgImage)
     }
+    
 }
 
 class GradientProgressView: UIProgressView {
@@ -55,4 +56,5 @@ class GradientProgressView: UIProgressView {
             self.progressImage = gradientImage
         }
     }
+    
 }

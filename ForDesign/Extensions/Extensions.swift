@@ -5,7 +5,6 @@
 //  Created by GIORGI PILISSHVILI on 18.08.22.
 //
 
-import Foundation
 import FirebaseDatabase
 import UIKit
 
@@ -30,23 +29,17 @@ extension Date {
     func getAge() -> Int {
         return Int(Calendar.current.dateComponents([.year], from: self, to: Date()).year!)
     }
-}
-
-// MARK: - TableView
-
-extension UITableView {
     
-    func configure(with cell: String, for viewController: UITableViewDelegate & UITableViewDataSource, cornerStyle: CornerStyle?) {
-        self.delegate = viewController
-        self.dataSource = viewController
-        self.register(UINib(nibName: cell, bundle: nil), forCellReuseIdentifier: cell)
-        self.addObserver(viewController as! NSObject, forKeyPath: "contentSize", options: .new, context: nil)
+    func timeAgoDisplay() -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
         
-        if let cornerStyle = cornerStyle {
-            self.setCornerStyle(cornerStyle)
+        if self.description == Date().description {
+            return "ახლახანს"
         }
+        
+        return formatter.localizedString(for: self, relativeTo: Date())
     }
-    
 }
 
 extension UITableViewCell {
@@ -63,7 +56,7 @@ extension UICollectionView {
         self.delegate = viewController
         self.dataSource = viewController
         self.register(UINib(nibName: cell, bundle: nil), forCellWithReuseIdentifier: cell)
-        
+
         if let cornerStyle = cornerStyle {
             self.setCornerStyle(cornerStyle)
         }
@@ -93,7 +86,7 @@ extension UIViewController {
     
 }
 
-// MARK: - Views
+// MARK: - Textfield
 
 extension UITextField {
     
@@ -123,7 +116,7 @@ extension UITextField {
     
 }
 
-// MARK: - Firebase
+// MARK: - Firebase decode
 
 extension DataSnapshot {
     
@@ -140,6 +133,7 @@ extension DataSnapshot {
             
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .short
+            dateFormatter.timeStyle = .medium
             
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .formatted(dateFormatter)
@@ -154,7 +148,7 @@ extension DataSnapshot {
             return nil
         }
     }
-    
+        
 }
 
 // MARK: - Colors

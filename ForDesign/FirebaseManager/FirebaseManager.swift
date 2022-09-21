@@ -5,13 +5,13 @@
 //  Created by GIORGI PILISSHVILI on 19.08.22.
 //
 
-import Foundation
 import FirebaseAuth
 import GoogleSignIn
 import FirebaseDatabase
 import FirebaseStorage
 import FirebaseFirestoreSwift
 
+/// A convenient interface to the contents of the **Firebase** service, and the primary means of interacting with it.
 class FirebaseManager {
     
     static let shared = FirebaseManager()
@@ -22,13 +22,13 @@ class FirebaseManager {
     static let currentUser = Auth.auth().currentUser
     
     static let db = Database.database().reference()
-    static let dbUsers = db.child("users")
-    static let dbLecturers = db.child("lecturers")
-    static let dbChats = db.child("chats")
-    static let dbMemes = db.child("memes")
-    static let dbPosts = db.child("posts")
+    let dbUsers = db.child("users")
+    let dbLecturers = db.child("lecturers")
+    let dbChats = db.child("chats")
+    let dbMemes = db.child("memes")
+    let dbPosts = db.child("posts")
     
-    static let storage = Storage.storage().reference()
+    let storage = Storage.storage().reference()
     
     // MARK: - Sign In / Sign Up
     
@@ -52,28 +52,26 @@ class FirebaseManager {
                 }
                 
                 // If user is registered
-                
-                let referenceOfCurrentUser = FirebaseManager.dbUsers.child(authResult?.user.uid ?? "noid")
-//                let referenceOfCurrentUser = FirebaseManager.dbUsers.child(FirebaseManager.currentUser?.uid ?? "noid")
+                let referenceOfCurrentUser = self.dbUsers.child(authResult?.user.uid ?? "noid")
                 
                 referenceOfCurrentUser.observeSingleEvent(of: .value) { snapshot in
                     completion(snapshot.exists())
                 }
-
+                
                 
             }
             
         }
         
     }
-        
+    
     func signUp(with formData: Dictionary<String, Any>, profileImageData: Data?, completion: @escaping (Error?, DatabaseReference) -> Void) {
         
         guard let currentUser = FirebaseManager.currentUser else {
             return
         }
         
-        let referenceOfUser = FirebaseManager.dbUsers.child(currentUser.uid)
+        let referenceOfUser = dbUsers.child(currentUser.uid)
         
         var userData = formData
         userData["id"] = FirebaseManager.currentUser!.uid
@@ -86,19 +84,73 @@ class FirebaseManager {
         if let profileImageData = profileImageData {
             uploadProfilePicture(imageData: profileImageData)
         } else {
-            FirebaseManager.dbUsers.child(FirebaseManager.currentUser!.uid).child("profile").setValue(FirebaseManager.currentUser!.photoURL?.absoluteString)
+            dbUsers.child(FirebaseManager.currentUser!.uid).child("profile").setValue(FirebaseManager.currentUser!.photoURL?.absoluteString)
         }
         
     }
     
     // MARK: - Home
     
+    func fetchPosts(completion: @escaping ([Post]) -> Void) {
+        
+        dbPosts.observeSingleEvent(of: .value) { snapshot in
+            var arrayOfPosts = [Post]()
+            
+            for dataSnapshot in snapshot.children.allObjects as! [DataSnapshot] {
+                let postType = dataSnapshot.decode(class: PType.self)
+                guard let postType = postType else { return }
+                
+                switch postType.type {
+                    
+                case .text:
+                    let currentPost = dataSnapshot.decode(class: TextPost.self)
+                    guard let currentPost = currentPost else { return }
+                    arrayOfPosts.append(currentPost)
+                case .images:
+                    let currentPost = dataSnapshot.decode(class: ImagePost.self)
+                    guard let currentPost = currentPost else { return }
+                    arrayOfPosts.append(currentPost)
+                }
+                
+            }
+            
+            arrayOfPosts.sort { $0.date.compare($1.date) == .orderedDescending }
+            
+            completion(arrayOfPosts)
+            
+        }
+        
+    }
+    
+    func fetchComments(of post: PostViewModel, completion: @escaping ([Comment]) -> Void) {
+        
+        let referenceOfComments = dbPosts.child(post.id).child("comments")
+        
+        referenceOfComments.observe(.value) { snapshot in
+            var arrayOfComments = [Comment]()
+            
+            for dataSnapshot in snapshot.children.allObjects as! [DataSnapshot] {
+                let currentComment = dataSnapshot.decode(class: Comment.self)
+                guard let currentComment = currentComment else {
+                    return
+                }
+                
+                arrayOfComments.append(currentComment)
+            }
+            
+            arrayOfComments.sort { $0.date.compare($1.date) == .orderedDescending }
+            
+            completion(arrayOfComments)
+        }
+        
+    }
+    
     func post(text: String, completion: @escaping () -> Void) {
         
-        let referenceOfPost = FirebaseManager.dbPosts.childByAutoId()
+        let referenceOfPost = dbPosts.childByAutoId()
         
-        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
-
+        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium))
+        
         let postData: [String : Any] = [
             "id": referenceOfPost.key!,
             "author": FirebaseManager.currentUser!.uid,
@@ -110,34 +162,34 @@ class FirebaseManager {
         referenceOfPost.setValue(postData) { error, databaseReference in
             completion()
         }
-                
+        
     }
     
     func post(text: String, arrayOfImageData: [Data], completion: @escaping () -> Void) {
         
-        let referenceOfPost = FirebaseManager.dbPosts.childByAutoId()
+        let referenceOfPost = dbPosts.childByAutoId()
         
-        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
+        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium))
         
         for (imageIndex, imageData) in arrayOfImageData.enumerated() {
-            let imageKey = FirebaseManager.dbPosts.child(referenceOfPost.key!).child("images").childByAutoId()
+            let imageKey = dbPosts.child(referenceOfPost.key!).child("images").childByAutoId()
             
             let storageRef = "images/post_images/\(referenceOfPost.key!)/\(imageKey.key!).png"
             
-            FirebaseManager.storage.child(storageRef).putData(imageData, metadata: nil) { _, error in
+            storage.child(storageRef).putData(imageData, metadata: nil) { _, error in
                 guard error == nil else {
                     print("Failed to upload.")
                     return
                 }
                 
-                FirebaseManager.storage.child(storageRef).downloadURL { url, error in
+                self.storage.child(storageRef).downloadURL { url, error in
                     guard let url = url, error == nil else {
                         return
                     }
                     
                     let urlString = url.absoluteString
                     
-                    FirebaseManager.dbPosts.child(referenceOfPost.key!).child("images").updateChildValues(["\(imageKey.key!)": urlString]) { _, _ in
+                    self.dbPosts.child(referenceOfPost.key!).child("images").updateChildValues(["\(imageKey.key!)": urlString]) { _, _ in
                         if imageIndex + 1 == arrayOfImageData.count {
                             
                             let postData: [String : Any] = [
@@ -163,31 +215,33 @@ class FirebaseManager {
         
     }
     
-    func react(post: Post, completion: @escaping () -> Void) {
+    func react(post: PostViewModel, completion: @escaping () -> Void) {
         
-        let referenceOfReacts = FirebaseManager.dbPosts.child(post.id).child("reacts")
+        let referenceOfReacts = dbPosts.child(post.id).child("reacts")
         let referenceOfUserReact = referenceOfReacts.child(FirebaseManager.currentUser!.uid)
         
         referenceOfUserReact.observeSingleEvent(of: .value) { snapshot in
-         
+            
             if snapshot.exists() {
                 snapshot.ref.removeValue()
             } else {
                 let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
-                referenceOfReacts.updateChildValues([FirebaseManager.currentUser!.uid: date])
+                referenceOfReacts.updateChildValues([FirebaseManager.currentUser!.uid: date]) { _, _ in
+                    completion()
+                }
             }
             
         }
         
     }
     
-    func comment(post: Post, with comment: String, completion: @escaping () -> Void) {
+    func comment(post: PostViewModel, with comment: String, completion: @escaping () -> Void) {
         
-        let referenceOfComments = FirebaseManager.dbPosts.child(post.id).child("comments")
+        let referenceOfComments = dbPosts.child(post.id).child("comments")
         let referenceOfComment = referenceOfComments.childByAutoId()
         
-        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
-
+        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium))
+        
         let data = [
             "id": referenceOfComment.key,
             "author": Auth.auth().currentUser!.uid,
@@ -205,7 +259,8 @@ class FirebaseManager {
     
     func fetchMemes(completion: @escaping ([Meme]) -> Void) {
         
-        FirebaseManager.dbMemes.observe(.value) { snapshot in
+        dbMemes.observe(.value) { snapshot in
+            
             var arrayOfMemes = [Meme]()
             
             for dataSnapshot in snapshot.children.allObjects as! [DataSnapshot] {
@@ -213,7 +268,7 @@ class FirebaseManager {
                 guard let currentMeme = currentMeme else {
                     return
                 }
-
+                
                 arrayOfMemes.append(currentMeme)
             }
             
@@ -225,21 +280,21 @@ class FirebaseManager {
     
     func uploadMeme(data: Data, completion: @escaping () -> Void) {
         
-        let databaseReference = FirebaseManager.dbMemes.childByAutoId()
+        let databaseReference = dbMemes.childByAutoId()
         
         let id = databaseReference.key
         guard let id = id else { return }
         
         let storageReference = "images/memes/\(id).png"
         
-        FirebaseManager.storage.child(storageReference).putData(data, metadata: nil) { _, error in
+        storage.child(storageReference).putData(data, metadata: nil) { _, error in
             
             guard error == nil else {
                 print("Failed to upload.")
                 return
             }
             
-            FirebaseManager.storage.child(storageReference).downloadURL { url, error in
+            self.storage.child(storageReference).downloadURL { url, error in
                 guard let url = url, error == nil else {
                     return
                 }
@@ -253,10 +308,10 @@ class FirebaseManager {
                     "url": meme.url
                 ]
                 
-                FirebaseManager.dbMemes.child(databaseReference.key!).setValue(data) { _, _ in
+                self.dbMemes.child(databaseReference.key!).setValue(data) { _, _ in
                     completion()
                 }
-            
+                
             }
         }
         
@@ -266,7 +321,7 @@ class FirebaseManager {
     
     func fetchLecturers(completion: @escaping ([Lecturer]) -> Void) {
         
-        FirebaseManager.dbLecturers.observeSingleEvent(of: .value) { snapshot in
+        dbLecturers.observeSingleEvent(of: .value) { snapshot in
             var arrayOfLecturers = [Lecturer]()
             
             for dataSnapshot in snapshot.children.allObjects as! [DataSnapshot] {
@@ -274,7 +329,7 @@ class FirebaseManager {
                 guard let currentLecturer = currentLecturer else {
                     return
                 }
-
+                
                 arrayOfLecturers.append(currentLecturer)
             }
             
@@ -285,7 +340,7 @@ class FirebaseManager {
     
     func fetchRating(of lecturer: Lecturer, completion: @escaping ([String:Int], [Int], Float) -> (Void)) {
         
-        let referenceOfRates = FirebaseManager.dbLecturers.child(lecturer.id).child("rates")
+        let referenceOfRates = dbLecturers.child(lecturer.id).child("rates")
         
         referenceOfRates.observeSingleEvent(of: .value) { snapshot in
             let ratingData = snapshot.value as? [String : Int] ?? [:]
@@ -300,7 +355,7 @@ class FirebaseManager {
     
     func fetchReviews(of lecturer: Lecturer, completion: @escaping ([Review]) -> (Void)) {
         
-        let referenceOfReviews = FirebaseManager.dbLecturers.child(lecturer.id).child("reviews")
+        let referenceOfReviews = dbLecturers.child(lecturer.id).child("reviews")
         
         referenceOfReviews.observe(.value) { snapshot in
             var arrayOfReviews = [Review]()
@@ -312,6 +367,8 @@ class FirebaseManager {
                 arrayOfReviews.append(currentReview)
             }
             
+            arrayOfReviews.sort { $0.date.compare($1.date) == .orderedDescending }
+            
             completion(arrayOfReviews)
             
         }
@@ -319,7 +376,7 @@ class FirebaseManager {
     }
     
     func rate(lecturer: Lecturer, by rate: Double, completion: @escaping () -> (Void)) {
-        let referenceOfRates = FirebaseManager.dbLecturers.child(lecturer.id).child("rates")
+        let referenceOfRates = dbLecturers.child(lecturer.id).child("rates")
         referenceOfRates.child(FirebaseManager.currentUser!.uid).setValue(Int(rate))
         
         completion()
@@ -331,10 +388,10 @@ class FirebaseManager {
             return
         }
         
-        let referenceOfReviews = FirebaseManager.dbLecturers.child(lecturer.id).child("reviews")
+        let referenceOfReviews = dbLecturers.child(lecturer.id).child("reviews")
         let referenceOfReview = referenceOfReviews.childByAutoId()
-                
-        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
+        
+        let date = String(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium))
         
         let data = [
             "id": referenceOfReview.key,
@@ -350,15 +407,15 @@ class FirebaseManager {
     }
     
     // MARK: - Profile
-                                               
+    
     func fetchUserInfo(by userId: String, completion: @escaping (User, [UserInfo]) -> Void) {
         
-        let referenceOfUser = FirebaseManager.dbUsers.child(userId)
+        let referenceOfUser = dbUsers.child(userId)
         
         referenceOfUser.observeSingleEvent(of: .value) { snapshot in
             
             let user = snapshot.decode(class: User.self)
-                        
+            
             guard let user = user else { return }
             
             // User info
@@ -382,7 +439,7 @@ class FirebaseManager {
     }
     
     func updateUserProfile(with data: [String:Any], completion: @escaping () -> Void) {
-        let referenceOfUser = FirebaseManager.dbUsers.child(FirebaseManager.currentUser!.uid)
+        let referenceOfUser = dbUsers.child(FirebaseManager.currentUser!.uid)
         referenceOfUser.updateChildValues(data) { error, reference in
             completion()
         }
@@ -394,20 +451,20 @@ class FirebaseManager {
         
         let ref = "images/profile_images/\(FirebaseManager.currentUser!.uid)/profile.png"
         
-        FirebaseManager.storage.child(ref).putData(imageData, metadata: nil) { _, error in
+        storage.child(ref).putData(imageData, metadata: nil) { _, error in
             guard error == nil else {
                 print("Failed to upload.")
                 return
             }
             
-            FirebaseManager.storage.child(ref).downloadURL { url, error in
+            self.storage.child(ref).downloadURL { url, error in
                 guard let url = url, error == nil else {
                     return
                 }
                 
                 let urlString = url.absoluteString
                 
-                FirebaseManager.dbUsers.child(FirebaseManager.currentUser!.uid).child("profile").setValue(urlString)
+                self.dbUsers.child(FirebaseManager.currentUser!.uid).child("profile").setValue(urlString)
                 
             }
         }

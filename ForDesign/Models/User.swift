@@ -7,7 +7,9 @@
 
 import Foundation
 
-struct User: Codable {
+// MARK: - User
+
+struct User: Codable, Identifiable {
     let id: String
     let name: String
     let surname: String
@@ -21,7 +23,7 @@ struct User: Codable {
     let faculty: String
     let minor: String?
     
-    let chats: [String]?
+    let chats: [String:Bool]?
 }
 
 enum Gender: String, Codable {
@@ -29,7 +31,7 @@ enum Gender: String, Codable {
     case female
 }
 
-//
+// MARK: - User info
 
 struct UserInfo {
     var name: String

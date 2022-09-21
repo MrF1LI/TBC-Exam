@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Post general
+
 protocol Post: Codable {
     var id: String { get }
     var author: String { get }
@@ -16,14 +18,13 @@ protocol Post: Codable {
 enum PostType: String, Codable {
     case text
     case images
-    case poll
 }
 
 struct PType: Codable {
     let type: PostType
 }
 
-//
+// MARK: - Posts
 
 struct TextPost: Post, Codable {
     var id: String
@@ -38,19 +39,4 @@ struct ImagePost: Post, Codable {
     var date: Date
     var content: String?
     var images: [String:String]
-}
-
-struct Poll: Post, Codable {
-    
-    struct Option: Codable {
-        var id: String
-        var content: String
-    }
-    
-    var id: String
-    var author: String
-    var date: Date
-    let question: String
-    let options: [String:Option]
-    
 }

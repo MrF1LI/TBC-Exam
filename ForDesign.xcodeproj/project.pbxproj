@@ -252,11 +252,7 @@
 				4E58907428C7ABC6003785B3 /* UserProfile */,
 				4E58907728C7AC5D003785B3 /* Comments */,
 				4E299E6C28CE22CE00A54779 /* CreatePost */,
-				4ED8DB7928B798070021EBB8 /* EditProfileViewController.swift */,
-				4E69B82D28BFF34B000448A1 /* AddMemeViewController.swift */,
-				4ED8DB8628B7C0270021EBB8 /* GalleryViewController.swift */,
-				4E16B5F228AD885100BE6DBE /* TabBarViewController.swift */,
-				4E16B5F728AD89EE00BE6DBE /* ChatsViewController.swift */,
+				4E6FCFE228DADF3D004A9B74 /* Other */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -463,6 +459,18 @@
 				4E58907E28C7AC9A003785B3 /* CommentViewModel.swift */,
 			);
 			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		4E6FCFE228DADF3D004A9B74 /* Other */ = {
+			isa = PBXGroup;
+			children = (
+				4ED8DB7928B798070021EBB8 /* EditProfileViewController.swift */,
+				4E69B82D28BFF34B000448A1 /* AddMemeViewController.swift */,
+				4ED8DB8628B7C0270021EBB8 /* GalleryViewController.swift */,
+				4E16B5F228AD885100BE6DBE /* TabBarViewController.swift */,
+				4E16B5F728AD89EE00BE6DBE /* ChatsViewController.swift */,
+			);
+			path = Other;
 			sourceTree = "<group>";
 		};
 		4E80734428BE41BF00D3D9A7 /* App */ = {
